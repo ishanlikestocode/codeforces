@@ -114,20 +114,36 @@ function Get-ProblemIdentifier {
 
     $fileNameWithoutExt = [System.IO.Path]::GetFileNameWithoutExtension($FilePath)
 
-    # Try extracting problem title from file header if available
-    try {
-        $firstLines = Get-Content -Path $FilePath -TotalCount 15 -ErrorAction SilentlyContinue
-        foreach ($line in $firstLines) {
-            if ($line -match "(?i)problem\s*(?:name|title|code)?\s*:\s*(.+)") {
-                $matched = $matches[1].Trim(" *#/-\t")
-                if ($matched.Length -gt 0) {
-                    return $matched
+    # Try extracting problem title from file header if available (check first 30 lines)
+    if (Test-Path $FilePath) {
+        try {
+            $lines = Get-Content -Path $FilePath -TotalCount 30 -ErrorAction SilentlyContinue
+            foreach ($line in $lines) {
+                # Matches:
+                # // Problem Name: Watermelon
+                # // Problem: 4A - Watermelon
+                # * Problem Name: A. Watermelon
+                # // Task: Watermelon
+                # // Title: Watermelon
+                # # Problem: Watermelon
+                if ($line -match "(?i)(?:problem\s*(?:name|title|code)?|task|title)\s*[:=-]\s*(.+)") {
+                    $matched = $matches[1].Trim(" *#/-`t`r`n")
+                    # Clean trailing closing comment syntax like */
+                    $matched = $matched -replace "\s*\*\/.*$", ""
+                    if ($matched.Length -gt 0) {
+                        return $matched.Trim()
+                    }
+                }
+
+                # Check for Codeforces URL like https://codeforces.com/contest/1982/problem/A
+                if ($line -match "(?i)codeforces\.com/(?:contest|problemset/problem)/(\d+)/problem/([A-Za-z0-9]+)") {
+                    return "$($matches[1])$($matches[2])"
                 }
             }
-        }
-    } catch {}
+        } catch {}
+    }
 
-    # Otherwise clean the filename (e.g. 1982A -> 1982A)
+    # Otherwise fallback to the filename
     return $fileNameWithoutExt
 }
 
@@ -141,9 +157,8 @@ function Invoke-GitCommitAndPush {
         $relativePath = $FilePath
     }
 
-    $problemId = Get-ProblemIdentifier -FilePath $FilePath
-    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $commitMsg = "Solve Codeforces: $problemId [Accepted] - $timestamp"
+    $problemName = Get-ProblemIdentifier -FilePath $FilePath
+    $commitMsg = "Solved problem $problemName"
 
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Detected Accepted solution: $relativePath" -ForegroundColor Green
     Write-Host "  -> Staging file: $relativePath" -ForegroundColor Gray

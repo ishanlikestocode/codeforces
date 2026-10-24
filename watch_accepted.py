@@ -50,13 +50,18 @@ def is_accepted_file(file_path: Path, mode: str = "Smart") -> bool:
 def get_problem_title(file_path: Path) -> str:
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            for _ in range(15):
+            for _ in range(30):
                 line = f.readline()
-                match = re.search(r"problem\s*(?:name|title|code)?\s*:\s*(.+)", line, re.IGNORECASE)
+                match = re.search(r"(?:problem\s*(?:name|title|code)?|task|title)\s*[:=-]\s*(.+)", line, re.IGNORECASE)
                 if match:
                     cleaned = match.group(1).strip(" *#/-\t\r\n")
+                    cleaned = re.sub(r"\s*\*\/.*$", "", cleaned)
                     if cleaned:
                         return cleaned
+
+                url_match = re.search(r"codeforces\.com/(?:contest|problemset/problem)/(\d+)/problem/([A-Za-z0-9]+)", line, re.IGNORECASE)
+                if url_match:
+                    return f"{url_match.group(1)}{url_match.group(2)}"
     except Exception:
         pass
     return file_path.stem
@@ -74,8 +79,7 @@ def commit_and_push(file_path: Path, remote: str = "origin", branch: str = "main
         pass
 
     problem = get_problem_title(file_path)
-    now_str = time.strftime("%Y-%m-%d %H:%M:%S")
-    commit_msg = f"Solve Codeforces: {problem} [Accepted] - {now_str}"
+    commit_msg = f"Solved problem {problem}"
 
     print(f"\n[{time.strftime('%H:%M:%S')}] Detected Accepted solution: {rel_path}")
     print(f"  -> Staging: {rel_path}")

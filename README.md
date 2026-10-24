@@ -6,7 +6,7 @@ A structured repository for Codeforces and Competitive Programming solutions wit
 
 ## ⚡ Automated Workflow (Auto-Push on Save)
 
-Whenever you solve a problem and save an **Accepted** solution, the automation script automatically stages the file, creates a formatted commit message (e.g., `Solve Codeforces: 4A - Watermelon [Accepted]`), and pushes it to the `main` branch on GitHub.
+Whenever you solve a problem and save an **Accepted** solution, the automation script automatically stages the file, creates a formatted commit message (e.g., `Solved problem Watermelon` or `Solved problem 4A`), and pushes it to the `main` branch on GitHub.
 
 ### 1. Running the Watcher (PowerShell)
 Open a PowerShell terminal in this folder and run:

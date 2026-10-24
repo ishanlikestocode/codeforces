@@ -54,18 +54,25 @@ function Push-SingleFile {
     # Try reading problem title from header comments
     if (-not $CustomProblem) {
         try {
-            $lines = Get-Content -Path $FilePath -TotalCount 15 -ErrorAction SilentlyContinue
+            $lines = Get-Content -Path $FilePath -TotalCount 30 -ErrorAction SilentlyContinue
             foreach ($line in $lines) {
-                if ($line -match "(?i)problem\s*(?:name|title|code)?\s*:\s*(.+)") {
-                    $probName = $matches[1].Trim(" *#/-\t")
+                if ($line -match "(?i)(?:problem\s*(?:name|title|code)?|task|title)\s*[:=-]\s*(.+)") {
+                    $matched = $matches[1].Trim(" *#/-`t`r`n")
+                    $matched = $matched -replace "\s*\*\/.*$", ""
+                    if ($matched.Length -gt 0) {
+                        $probName = $matched.Trim()
+                        break
+                    }
+                }
+                if ($line -match "(?i)codeforces\.com/(?:contest|problemset/problem)/(\d+)/problem/([A-Za-z0-9]+)") {
+                    $probName = "$($matches[1])$($matches[2])"
                     break
                 }
             }
         } catch {}
     }
 
-    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $commitMsg = "Solve Codeforces: $probName [Accepted] - $timestamp"
+    $commitMsg = "Solved problem $probName"
 
     Write-Host "[*] Staging: $FilePath" -ForegroundColor Cyan
     git add -- "$FilePath"
