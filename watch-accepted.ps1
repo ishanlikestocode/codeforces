@@ -52,6 +52,7 @@ Write-Host "==========================================================" -Foregro
 Write-Host "  Codeforces Auto-Commit and Push Watcher" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " Watching directory : $WatchPath" -ForegroundColor White
+Write-Host " Solutions folder   : Solutions/" -ForegroundColor White
 Write-Host " Target branch      : $Branch" -ForegroundColor White
 Write-Host " Remote             : $Remote" -ForegroundColor White
 Write-Host " Detection mode     : $Mode" -ForegroundColor White
@@ -61,6 +62,26 @@ Write-Host "==========================================================" -Foregro
 Write-Host ""
 
 $supportedExtensions = @(".cpp", ".cc", ".cxx", ".c", ".py", ".java", ".rs", ".go")
+$automationScripts = @("watch-accepted.ps1", "watch_accepted.py", "push-accepted.ps1", "README.md", ".gitignore")
+$solutionsDir = Join-Path -Path $WatchPath -ChildPath "Solutions"
+if (-not (Test-Path $solutionsDir)) {
+    New-Item -ItemType Directory -Path $solutionsDir -Force | Out-Null
+}
+
+# Auto-organize any existing loose solution files from root into Solutions/
+$existingLoose = Get-ChildItem -Path $WatchPath -File -ErrorAction SilentlyContinue | Where-Object {
+    $supportedExtensions -contains $_.Extension.ToLower() -and
+    $automationScripts -notcontains $_.Name
+}
+if ($existingLoose) {
+    foreach ($item in $existingLoose) {
+        $dest = Join-Path -Path $solutionsDir -ChildPath $item.Name
+        Write-Host "[*] Organizing: Moving $($item.Name) -> Solutions/" -ForegroundColor Cyan
+        Move-Item -Path $item.FullName -Destination $dest -Force
+        git add -A -- "$($item.FullName)" "$dest" 2>&1 | Out-Null
+    }
+}
+
 $lastHandled = @{}
 $debounceSeconds = 2
 
@@ -163,14 +184,15 @@ function Invoke-GitCommitAndPush {
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Detected Accepted solution: $relativePath" -ForegroundColor Green
     Write-Host "  -> Staging file: $relativePath" -ForegroundColor Gray
     
-    $addResult = git add -- "$FilePath" 2>&1
+    # Stage changes related to this solution file (including any move/rename)
+    $addResult = git add -A -- "$FilePath" 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  [!] git add failed: $addResult" -ForegroundColor Red
         return
     }
 
     # Check if there are changes to commit
-    $status = git status --porcelain "$FilePath" 2>&1
+    $status = git status --porcelain 2>&1
     if (-not $status) {
         Write-Host "  [*] No changes to commit for $relativePath." -ForegroundColor Yellow
         return
@@ -206,10 +228,16 @@ $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.Noti
 
 $action = {
     $path = $Event.SourceEventArgs.FullPath
+    $fileName = [System.IO.Path]::GetFileName($path)
     $ext = [System.IO.Path]::GetExtension($path).ToLower()
 
-    # Ignore .git directory and CPH metadata
-    if ($path -match "\\\.git\\" -or $path -match "\\\.cph\\" -or $path -match "\\\.vscode\\") {
+    # Ignore .git directory, CPH metadata, and VS Code configs
+    if ($path -match "\\\.git\\" -or $path -match "\\\.cph\\" -or $path -match "\\\.vscode\\" -or $path -match "\\\.github\\" -or $path -match "\\__pycache__\\") {
+        return
+    }
+
+    # Keep automation scripts in the main folder - never move or process them as solutions
+    if ($automationScripts -contains $fileName) {
         return
     }
 
@@ -233,7 +261,28 @@ $action = {
     if (Test-Path $path) {
         $isAccepted = Test-IsAcceptedFile -FilePath $path -CheckMode $Mode
         if ($isAccepted) {
-            Invoke-GitCommitAndPush -FilePath $path
+            $parentDir = [System.IO.Path]::GetDirectoryName($path)
+            $targetPath = $path
+
+            # If solution file was saved outside Solutions/, automatically move it into Solutions/
+            if (-not $parentDir.StartsWith($solutionsDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+                if (-not (Test-Path $solutionsDir)) {
+                    New-Item -ItemType Directory -Path $solutionsDir -Force | Out-Null
+                }
+                $targetPath = Join-Path -Path $solutionsDir -ChildPath $fileName
+                Write-Host "  -> Auto-moving solution: $fileName -> Solutions/$fileName" -ForegroundColor Cyan
+
+                # Pre-register destination to prevent duplicate debounce trigger
+                $lastHandled[$targetPath] = (Get-Date).AddSeconds(3)
+                $lastHandled[$path] = Get-Date
+
+                Move-Item -Path $path -Destination $targetPath -Force
+
+                # Stage deletion of old root path and addition of new Solutions/ path
+                git add -A -- "$path" "$targetPath" 2>&1 | Out-Null
+            }
+
+            Invoke-GitCommitAndPush -FilePath $targetPath
         }
     }
 }

@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 
 WATCH_EXTENSIONS = {".cpp", ".cc", ".cxx", ".c", ".py", ".java", ".rs", ".go"}
+AUTOMATION_SCRIPTS = {"watch_accepted.py", "watch-accepted.ps1", "push-accepted.ps1", "README.md", ".gitignore"}
 DEBOUNCE_SECONDS = 2.0
 NEGATIVE_PATTERNS = re.compile(r"(wrong\s*answer|\bwa\b|time\s*limit\s*exceeded|\btle\b|runtime\s*error|\bre\b|compilation\s*error|\bdraft\b|\btesting\b)", re.IGNORECASE)
 POSITIVE_PATTERNS = re.compile(r"(verdict:\s*accepted|\bstatus:\s*accepted|\baccepted\b|\bverdict\s*:\s*ac\b)", re.IGNORECASE)
@@ -84,12 +85,12 @@ def commit_and_push(file_path: Path, remote: str = "origin", branch: str = "main
     print(f"\n[{time.strftime('%H:%M:%S')}] Detected Accepted solution: {rel_path}")
     print(f"  -> Staging: {rel_path}")
 
-    code, out = run_git(["add", "--", str(file_path)])
+    code, out = run_git(["add", "-A", "--", str(file_path)])
     if code != 0:
         print(f"  [!] git add failed: {out}")
         return
 
-    code, status_out = run_git(["status", "--porcelain", str(file_path)])
+    code, status_out = run_git(["status", "--porcelain"])
     if not status_out:
         print(f"  [*] No new changes to commit for {rel_path}.")
         return
@@ -103,7 +104,7 @@ def commit_and_push(file_path: Path, remote: str = "origin", branch: str = "main
     print(f"  -> Pushing to {remote}/{branch}...")
     code, out = run_git(["push", remote, branch])
     if code == 0:
-        print(f"  [✓] Successfully pushed to {remote}/{branch}!")
+        print(f"  [SUCCESS] Successfully pushed to {remote}/{branch}!")
     else:
         print(f"  [!] Push notice: git push returned an error.")
         print(f"      Details: {out}")
@@ -111,23 +112,35 @@ def commit_and_push(file_path: Path, remote: str = "origin", branch: str = "main
         print(f"      (Your commit has been safely recorded locally in Git)")
 
 def watch(watch_dir: Path, branch: str = "main", remote: str = "origin", mode: str = "Smart"):
+    solutions_dir = watch_dir / "Solutions"
+    solutions_dir.mkdir(parents=True, exist_ok=True)
+
     print("=" * 60)
     print("  Codeforces Auto-Commit & Push Watcher (Python)")
     print("=" * 60)
     print(f" Directory      : {watch_dir.resolve()}")
+    print(f" Solutions dir  : {solutions_dir.resolve()}")
     print(f" Target branch  : {branch}")
     print(f" Remote         : {remote}")
     print(f" Mode           : {mode}")
     print(f" Active Status  : Monitoring for saves (Press Ctrl+C to stop)...")
     print("=" * 60 + "\n")
 
+    # Organize any loose solutions at root
+    for p in watch_dir.iterdir():
+        if p.is_file() and p.suffix.lower() in WATCH_EXTENSIONS and p.name not in AUTOMATION_SCRIPTS:
+            dest = solutions_dir / p.name
+            print(f"[*] Organizing: Moving {p.name} -> Solutions/")
+            p.replace(dest)
+            run_git(["add", "-A", "--", str(p), str(dest)])
+
     last_seen_mtimes: dict[str, float] = {}
     last_handled_time: dict[str, float] = {}
 
     # Initialize snapshot
     for path in watch_dir.rglob("*"):
-        if path.is_file() and path.suffix.lower() in WATCH_EXTENSIONS:
-            if ".git" not in path.parts and ".cph" not in path.parts and ".vscode" not in path.parts:
+        if path.is_file() and path.suffix.lower() in WATCH_EXTENSIONS and path.name not in AUTOMATION_SCRIPTS:
+            if ".git" not in path.parts and ".cph" not in path.parts and ".vscode" not in path.parts and ".github" not in path.parts:
                 try:
                     last_seen_mtimes[str(path.resolve())] = path.stat().st_mtime
                 except OSError:
@@ -138,8 +151,8 @@ def watch(watch_dir: Path, branch: str = "main", remote: str = "origin", mode: s
             time.sleep(1)
             current_files = []
             for path in watch_dir.rglob("*"):
-                if path.is_file() and path.suffix.lower() in WATCH_EXTENSIONS:
-                    if ".git" in path.parts or ".cph" in path.parts or ".vscode" in path.parts:
+                if path.is_file() and path.suffix.lower() in WATCH_EXTENSIONS and path.name not in AUTOMATION_SCRIPTS:
+                    if ".git" in path.parts or ".cph" in path.parts or ".vscode" in path.parts or ".github" in path.parts:
                         continue
                     current_files.append(path)
 
@@ -159,7 +172,16 @@ def watch(watch_dir: Path, branch: str = "main", remote: str = "origin", mode: s
                         last_handled_time[resolved_str] = now
                         time.sleep(0.3)
                         if is_accepted_file(path, mode):
-                            commit_and_push(path, remote=remote, branch=branch)
+                            target_file = path
+                            # If file is outside Solutions/, move it into Solutions/
+                            if solutions_dir not in path.parents:
+                                target_file = solutions_dir / path.name
+                                print(f"  -> Auto-moving solution: {path.name} -> Solutions/{path.name}")
+                                last_handled_time[str(target_file.resolve())] = now + 3.0
+                                path.replace(target_file)
+                                run_git(["add", "-A", "--", str(path), str(target_file)])
+
+                            commit_and_push(target_file, remote=remote, branch=branch)
 
     except KeyboardInterrupt:
         print("\nWatcher stopped.")

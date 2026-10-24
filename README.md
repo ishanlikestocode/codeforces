@@ -6,7 +6,9 @@ A structured repository for Codeforces and Competitive Programming solutions wit
 
 ## ⚡ Automated Workflow (Auto-Push on Save)
 
-Whenever you solve a problem and save an **Accepted** solution, the automation script automatically stages the file, creates a formatted commit message (e.g., `Solved problem Watermelon` or `Solved problem 4A`), and pushes it to the `main` branch on GitHub.
+Whenever you solve a problem and save an **Accepted** solution, the automation script automatically moves the solution file into the `Solutions/` directory (if not already there), creates a formatted commit message (e.g., `Solved problem D_Difference` or `Solved problem Watermelon`), and pushes it to the `main` branch on GitHub.
+
+All automation scripts remain in the root directory.
 
 ### 1. Running the Watcher (PowerShell)
 Open a PowerShell terminal in this folder and run:
@@ -57,25 +59,21 @@ git push -u origin main
 
 ---
 
-## 📁 Recommended Solution Structure
-
-You can organize your solution files as you prefer:
+## 📁 Repository Structure
 
 ```text
 Codeforces-Solutions/
-├── 0800-1000/           # Grouped by difficulty rating
+├── Solutions/           # All your Codeforces solution files (auto-moved here)
+│   ├── D_Difference.cpp
 │   ├── 4A_Watermelon.cpp
 │   └── 71A_Way_Too_Long_Words.cpp
-├── Div2/                # Or grouped by contest division / round
-│   └── Round_900/
-│       ├── A.cpp
-│       └── B.cpp
 ├── .vscode/             # VS Code task automation
 ├── .github/workflows/   # CI/CD solution compilation verification
 ├── .gitignore           # Ignores executables (.exe, .out) and CPH test files
-├── watch-accepted.ps1   # PowerShell automation watcher
-├── watch_accepted.py    # Python automation watcher
-└── push-accepted.ps1    # Manual instant push script
+├── watch-accepted.ps1   # PowerShell automation watcher (stays in main folder)
+├── watch_accepted.py    # Python automation watcher (stays in main folder)
+├── push-accepted.ps1    # Manual instant push script (stays in main folder)
+└── README.md
 ```
 
 ---

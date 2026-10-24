@@ -48,13 +48,29 @@ function Push-SingleFile {
         return
     }
 
-    $fileName = [System.IO.Path]::GetFileNameWithoutExtension($FilePath)
-    $probName = if ($CustomProblem) { $CustomProblem } else { $fileName }
+    $solutionsDir = Join-Path -Path $PSScriptRoot -ChildPath "Solutions"
+    if (-not (Test-Path $solutionsDir)) {
+        New-Item -ItemType Directory -Path $solutionsDir -Force | Out-Null
+    }
+
+    $fileName = [System.IO.Path]::GetFileName($FilePath)
+    $parentDir = [System.IO.Path]::GetDirectoryName((Resolve-Path $FilePath))
+    $targetPath = $FilePath
+
+    # If file is outside Solutions/, auto-move it into Solutions/
+    if (-not $parentDir.StartsWith($solutionsDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $targetPath = Join-Path -Path $solutionsDir -ChildPath $fileName
+        Write-Host "[*] Auto-moving solution: $fileName -> Solutions/$fileName" -ForegroundColor Cyan
+        Move-Item -Path $FilePath -Destination $targetPath -Force
+        git add -A -- "$FilePath" "$targetPath" 2>&1 | Out-Null
+    }
+
+    $probName = if ($CustomProblem) { $CustomProblem } else { [System.IO.Path]::GetFileNameWithoutExtension($targetPath) }
     
     # Try reading problem title from header comments
     if (-not $CustomProblem) {
         try {
-            $lines = Get-Content -Path $FilePath -TotalCount 30 -ErrorAction SilentlyContinue
+            $lines = Get-Content -Path $targetPath -TotalCount 30 -ErrorAction SilentlyContinue
             foreach ($line in $lines) {
                 if ($line -match "(?i)(?:problem\s*(?:name|title|code)?|task|title)\s*[:=-]\s*(.+)") {
                     $matched = $matches[1].Trim(" *#/-`t`r`n")
@@ -74,8 +90,8 @@ function Push-SingleFile {
 
     $commitMsg = "Solved problem $probName"
 
-    Write-Host "[*] Staging: $FilePath" -ForegroundColor Cyan
-    git add -- "$FilePath"
+    Write-Host "[*] Staging: $targetPath" -ForegroundColor Cyan
+    git add -A -- "$targetPath"
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to stage $FilePath"
         return
