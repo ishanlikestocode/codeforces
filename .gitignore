@@ -1,0 +1,35 @@
+# Compiled Object & Executable files
+*.exe
+*.out
+*.o
+*.obj
+*.pdb
+*.ilk
+
+# Competitive Programming Helper (CPH) local test cases
+.cph/
+
+# Input / Output temporary files used during local testing
+input.txt
+output.txt
+in.txt
+out.txt
+*.in
+*.ans
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Java
+*.class
+
+# Operating System files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# VS Code intermediate cache (allow .vscode configuration files like tasks.json)
+.vscode/*.log
+.vscode/.browse.VC.db*
+.vscode/ipch/

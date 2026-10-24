@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Watch & Auto-Push Accepted Solutions",
+            "type": "shell",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/watch-accepted.ps1\"",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "focus": false
+            },
+            "group": "none"
+        },
+        {
+            "label": "Commit & Push Current Solution [Accepted]",
+            "type": "shell",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/push-accepted.ps1\" -File \"${file}\"",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            },
+            "group": "build"
+        },
+        {
+            "label": "Push All Pending Accepted Solutions",
+            "type": "shell",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}/push-accepted.ps1\"",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            }
+        }
+    ]
+}
