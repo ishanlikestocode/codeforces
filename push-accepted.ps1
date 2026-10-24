@@ -80,7 +80,7 @@ function Push-SingleFile {
         return
     }
 
-    Write-Host "[*] Committing: `"$commitMsg`"" -ForegroundColor Green
+    Write-Host "[*] Committing: '$commitMsg'" -ForegroundColor Green
     git commit -m "$commitMsg"
     if ($LASTEXITCODE -ne 0) {
         Write-Error "git commit failed."
@@ -90,7 +90,7 @@ function Push-SingleFile {
     Write-Host "[*] Pushing to $Remote/$Branch..." -ForegroundColor Cyan
     $pushRes = git push $Remote $Branch 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "[✓] Pushed successfully to $Remote/$Branch!" -ForegroundColor Green
+        Write-Host "[SUCCESS] Pushed successfully to $Remote/$Branch!" -ForegroundColor Green
     } else {
         Write-Host "[!] Push notice: git push returned an error." -ForegroundColor Yellow
         Write-Host "    $pushRes" -ForegroundColor DarkGray

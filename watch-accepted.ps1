@@ -49,7 +49,7 @@ if (-not $gitCmd) {
 }
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  Codeforces Auto-Commit & Push Watcher" -ForegroundColor Green
+Write-Host "  Codeforces Auto-Commit and Push Watcher" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " Watching directory : $WatchPath" -ForegroundColor White
 Write-Host " Target branch      : $Branch" -ForegroundColor White
@@ -161,7 +161,7 @@ function Invoke-GitCommitAndPush {
         return
     }
 
-    Write-Host "  -> Committing: `"$commitMsg`"" -ForegroundColor Cyan
+    Write-Host "  -> Committing: '$commitMsg'" -ForegroundColor Cyan
     $commitResult = git commit -m "$commitMsg" 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  [!] git commit failed: $commitResult" -ForegroundColor Red
@@ -171,7 +171,7 @@ function Invoke-GitCommitAndPush {
     Write-Host "  -> Pushing to $Remote/$Branch..." -ForegroundColor Cyan
     $pushResult = git push $Remote $Branch 2>&1
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "  [✓] Successfully pushed to $Remote/$Branch!" -ForegroundColor Green
+        Write-Host "  [SUCCESS] Successfully pushed to $Remote/$Branch!" -ForegroundColor Green
     } else {
         Write-Host "  [!] Push notice: git push returned an error." -ForegroundColor Yellow
         Write-Host "      Output: $pushResult" -ForegroundColor DarkGray
@@ -191,7 +191,6 @@ $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName -bor [System.IO.Noti
 
 $action = {
     $path = $Event.SourceEventArgs.FullPath
-    $changeType = $Event.SourceEventArgs.ChangeType
     $ext = [System.IO.Path]::GetExtension($path).ToLower()
 
     # Ignore .git directory and CPH metadata
