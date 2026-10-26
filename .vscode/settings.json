@@ -1,0 +1,23 @@
+{
+    "cph.general.defaultLanguage": "cpp",
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": "\\.(cpp|cc|cxx)$",
+                "cmd": "git add . && git commit -m \"Solved Codeforces problem\" && git push origin main"
+            }
+        ]
+    },
+    "saveAndRun": {
+        "commands": [
+            {
+                "match": "\\.(cpp|cc|cxx)$",
+                "cmd": "git add . && git commit -m \"Solved Codeforces problem\" && git push origin main",
+                "silent": true
+            }
+        ]
+    }
+}
